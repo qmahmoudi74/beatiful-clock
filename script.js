@@ -1,88 +1,87 @@
-window.addEventListener("DOMContentLoaded", () => {
-  const clock = new BouncyBlockClock(".clock");
-});
+// loop => updateTime => displayTime => animateDigits => (removeAnimation) => tick => loop
 
-class BouncyBlockClock {
-  constructor(qs) {
-    this.el = document.querySelector(qs);
-    this.time = { a: [], b: [] };
-    this.rollClass = "clock__block--bounce";
-    this.digitsTimeout = null;
-    this.rollTimeout = null;
-    this.mod = 0 * 60 * 1000;
+const clockContainer = document.querySelector(".clock");
+const rollClass = "clock__block--bounce";
+let digitsTimeout;
+let rollTimeout;
 
-    this.loop();
-  }
+const tick = (newTime) => {
+  clearTimeout(digitsTimeout);
+  digitsTimeout = setTimeout(() => loop(newTime), 1e3);
+};
 
-  animateDigits() {
-    const groups = this.el.querySelectorAll("[data-time-group]");
+const removeAnimations = () => {
+  const groups = clockContainer.querySelectorAll("[data-time-group]");
 
-    Array.from(groups).forEach((group, i) => {
-      const { a, b } = this.time;
+  groups.forEach((group) => {
+    group.classList.remove(rollClass);
+  });
+};
 
-      if (a[i] !== b[i]) group.classList.add(this.rollClass);
+const animateDigits = (newTime) => {
+  const groups = clockContainer.querySelectorAll("[data-time-group]");
+
+  groups.forEach((group, i) => {
+    const { a, b } = newTime;
+    if (a[i] !== b[i]) group.classList.add(rollClass);
+  });
+
+  clearTimeout(rollTimeout);
+  rollTimeout = setTimeout(removeAnimations, 900);
+};
+
+const displayTime = (newTime) => {
+  const timeDigits = [...newTime.b];
+  const amPm = timeDigits.pop();
+
+  clockContainer.ariaLabel = `${timeDigits.join(":")} ${amPm}`;
+
+  Object.keys(newTime).forEach((letter) => {
+    const letterEls = clockContainer.querySelectorAll(
+      `[data-time="${letter}"]`
+    );
+
+    letterEls.forEach((el, i) => {
+      if (el.textContent === newTime[letter][i]) return;
+      el.textContent = newTime[letter][i];
     });
+  });
+};
 
-    clearTimeout(this.rollTimeout);
-    this.rollTimeout = setTimeout(this.removeAnimations.bind(this), 900);
-  }
+const updateTime = (oldTime) => {
+  const newTime = JSON.parse(JSON.stringify(oldTime));
 
-  displayTime() {
-    // screen reader time
-    const timeDigits = [...this.time.b];
-    const ap = timeDigits.pop();
+  const rawDate = new Date();
+  const date = new Date(rawDate.getTime() + 1e3);
 
-    this.el.ariaLabel = `${timeDigits.join(":")} ${ap}`;
+  const hour = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    hour12: false
+  });
 
-    // displayed time
-    Object.keys(this.time).forEach((letter) => {
-      const letterEls = this.el.querySelectorAll(`[data-time="${letter}"]`);
+  const minute = date.toLocaleTimeString("en-US", { minute: "2-digit" });
+  const second = date.toLocaleTimeString("en-US", { second: "2-digit" });
 
-      Array.from(letterEls).forEach((el, i) => {
-        el.textContent = this.time[letter][i];
-      });
-    });
-  }
+  const amPm = parseInt(hour) < 12 ? "AM" : "PM";
 
-  loop() {
-    this.updateTime();
-    this.displayTime();
-    this.animateDigits();
-    this.tick();
-  }
+  newTime.a = [...newTime.b];
+  newTime.b = [
+    `${parseInt(hour) > 12 ? `0${hour % 12}` : hour % 12}`,
+    minute,
+    second,
+    amPm
+  ];
 
-  removeAnimations() {
-    const groups = this.el.querySelectorAll("[data-time-group]");
+  if (!newTime.a.length) newTime.a = [...newTime.b];
 
-    Array.from(groups).forEach((group) => {
-      group.classList.remove(this.rollClass);
-    });
-  }
+  return newTime;
+};
 
-  tick() {
-    clearTimeout(this.digitsTimeout);
-    this.digitsTimeout = setTimeout(this.loop.bind(this), 1e3);
-  }
-
-  updateTime() {
-    const rawDate = new Date();
-    const date = new Date(Math.ceil(rawDate.getTime() / 1e3) * 1e3 + this.mod);
-    let h = date.getHours();
-    const m = date.getMinutes();
-    const s = date.getSeconds();
-    const ap = h < 12 ? "AM" : "PM";
-
-    if (h === 0) h = 12;
-    if (h > 12) h -= 12;
-
-    this.time.a = [...this.time.b];
-    this.time.b = [
-      h < 10 ? `0${h}` : `${h}`,
-      m < 10 ? `0${m}` : `${m}`,
-      s < 10 ? `0${s}` : `${s}`,
-      ap
-    ];
-
-    if (!this.time.a.length) this.time.a = [...this.time.b];
-  }
+function loop(oldTime = { a: [], b: [] }) {
+  const newTime = updateTime(oldTime);
+  displayTime(newTime);
+  animateDigits(newTime);
+  tick(newTime);
 }
+
+loop();
