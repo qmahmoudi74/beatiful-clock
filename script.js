@@ -13,6 +13,7 @@ class BouncyBlockClock {
 
     this.loop();
   }
+
   animateDigits() {
     const groups = this.el.querySelectorAll("[data-time-group]");
 
@@ -25,6 +26,7 @@ class BouncyBlockClock {
     clearTimeout(this.rollTimeout);
     this.rollTimeout = setTimeout(this.removeAnimations.bind(this), 900);
   }
+
   displayTime() {
     // screen reader time
     const timeDigits = [...this.time.b];
@@ -41,12 +43,14 @@ class BouncyBlockClock {
       });
     });
   }
+
   loop() {
     this.updateTime();
     this.displayTime();
     this.animateDigits();
     this.tick();
   }
+
   removeAnimations() {
     const groups = this.el.querySelectorAll("[data-time-group]");
 
@@ -54,10 +58,12 @@ class BouncyBlockClock {
       group.classList.remove(this.rollClass);
     });
   }
+
   tick() {
     clearTimeout(this.digitsTimeout);
     this.digitsTimeout = setTimeout(this.loop.bind(this), 1e3);
   }
+
   updateTime() {
     const rawDate = new Date();
     const date = new Date(Math.ceil(rawDate.getTime() / 1e3) * 1e3 + this.mod);
