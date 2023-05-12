@@ -2,13 +2,8 @@
 
 const clockContainer = document.querySelector(".clock");
 const rollClass = "clock__block--bounce";
-let digitsTimeout;
 let rollTimeout;
-
-const tick = (newTime) => {
-  clearTimeout(digitsTimeout);
-  digitsTimeout = setTimeout(() => loop(newTime), 1e3);
-};
+let time = { a: [], b: [] };
 
 const removeAnimations = () => {
   const groups = clockContainer.querySelectorAll("[data-time-group]");
@@ -18,11 +13,11 @@ const removeAnimations = () => {
   });
 };
 
-const animateDigits = (newTime) => {
+const animateDigits = () => {
   const groups = clockContainer.querySelectorAll("[data-time-group]");
 
   groups.forEach((group, i) => {
-    const { a, b } = newTime;
+    const { a, b } = time;
     if (a[i] !== b[i]) group.classList.add(rollClass);
   });
 
@@ -30,27 +25,25 @@ const animateDigits = (newTime) => {
   rollTimeout = setTimeout(removeAnimations, 900);
 };
 
-const displayTime = (newTime) => {
-  const timeDigits = [...newTime.b];
+const displayTime = () => {
+  const timeDigits = [...time.b];
   const amPm = timeDigits.pop();
 
   clockContainer.ariaLabel = `${timeDigits.join(":")} ${amPm}`;
 
-  Object.keys(newTime).forEach((letter) => {
+  Object.keys(time).forEach((letter) => {
     const letterEls = clockContainer.querySelectorAll(
       `[data-time="${letter}"]`
     );
 
     letterEls.forEach((el, i) => {
-      if (el.textContent === newTime[letter][i]) return;
-      el.textContent = newTime[letter][i];
+      if (el.textContent === time[letter][i]) return;
+      el.textContent = time[letter][i];
     });
   });
 };
 
-const updateTime = (oldTime) => {
-  const newTime = JSON.parse(JSON.stringify(oldTime));
-
+const updateTime = () => {
   const rawDate = new Date();
   const date = new Date(rawDate.getTime() + 1e3);
 
@@ -64,24 +57,22 @@ const updateTime = (oldTime) => {
 
   const amPm = parseInt(hour) < 12 ? "AM" : "PM";
 
-  newTime.a = [...newTime.b];
-  newTime.b = [
+  time.a = [...time.b];
+  time.b = [
     `${parseInt(hour) > 12 ? `0${hour % 12}` : hour % 12}`,
     minute,
     second,
     amPm
   ];
 
-  if (!newTime.a.length) newTime.a = [...newTime.b];
-
-  return newTime;
+  if (!time.a.length) time.a = [...time.b];
 };
 
-function loop(oldTime = { a: [], b: [] }) {
-  const newTime = updateTime(oldTime);
-  displayTime(newTime);
-  animateDigits(newTime);
-  tick(newTime);
-}
+const loop = () => {
+  updateTime();
+  displayTime();
+  animateDigits();
+};
 
 loop();
+setInterval(loop, 1000);
